@@ -63,5 +63,9 @@ if [ "$res_type" = "" ]; then
     echo "No resources found with a cluster internal IP of $ip in namespace $namespace"
   fi
 else
-  printf "%s:Namespace:IP\n%s:%s:%s\n" "$res_type" "$res_name" "$res_namespace" "$ip" | column -s: -t
+  if [ "$res_type" = "Pod" ]; then
+    kubectl get pod "$res_name" -n "$res_namespace" -ocustom-columns='KIND:.kind,NAME:.metadata.name,NAMESPACE:.metadata.namespace,IP:.status.podIP'
+  else
+    kubectl get svc "$res_name" -n "$res_namespace" -ocustom-columns='KIND:.kind,NAME:.metadata.name,NAMESPACE:.metadata.namespace,CLUSTER-IP:.spec.clusterIP'
+  fi
 fi
