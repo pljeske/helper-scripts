@@ -21,6 +21,9 @@ kind: Pod
 metadata:
   name: $pod_name
 spec:
+  securityContext:
+    runAsUser: 1001
+    runAsGroup: 1001
   volumes:
   - name: pvc
     persistentVolumeClaim:
@@ -37,7 +40,8 @@ spec:
       name: pvc
 EOF
 
-  sleep 2
+  sleep 1
+  kubectl wait --for=condition=ready --timeout=180s pod "$pod_name"
   kubectl exec -it "$pod_name" -- sh
   kubectl delete pod "$pod_name"
 }
