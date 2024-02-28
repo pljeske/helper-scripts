@@ -7,12 +7,14 @@ function random_string() {
 
 function main() {
   local namespace=""
+  local pod_name=""
+  local tmp_pod_manifest=""
   if [[ "$1" == "-n" || "$1" == "--namespace" ]]; then
     namespace="$2"
   fi
 
-  local pod_name="pvc-debugger-$(random_string)"
-  local tmp_pod_manifest=$(mktemp)
+  pod_name="pvc-debugger-$(random_string)"
+  tmp_pod_manifest=$(mktemp)
 
   cat <<EOF > "$tmp_pod_manifest"
 apiVersion: v1

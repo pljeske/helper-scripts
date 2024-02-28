@@ -43,8 +43,8 @@ else
   svc_ns="-n $namespace"
 fi
 
-svc=$(kubectl get svc $svc_ns -o jsonpath="{range .items[?(@.spec.clusterIP == \"$ip\")]}{@.metadata.name}{\" \"}{@.metadata.namespace}")
-pod=$(kubectl get pods $pod_ns -o jsonpath="{range .items[?(@.status.podIP == \"$ip\")]}{.metadata.name}{\" \"}{.metadata.namespace}")
+svc=$(kubectl get svc "$svc_ns" -o jsonpath="{range .items[?(@.spec.clusterIP == \"$ip\")]}{@.metadata.name}{\" \"}{@.metadata.namespace}")
+pod=$(kubectl get pods "$pod_ns" -o jsonpath="{range .items[?(@.status.podIP == \"$ip\")]}{.metadata.name}{\" \"}{.metadata.namespace}")
 
 if ! echo "$svc" | grep -q '^[[:space:]]*$'; then
   res_type="Service"
