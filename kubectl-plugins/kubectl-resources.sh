@@ -17,11 +17,10 @@ function print_pod_resources() {
   # Get all pods in the namespace and iterate over them
   local pod
   local resource_info
-  for pod in $(kubectl get pods -n "$namespace" -o jsonpath='{.items[*].metadata.name}'); do
-    # For each pod, fetch container details
-    resource_info=$(kubectl get pod "$pod" -n "$namespace" \
-      -ojsonpath="{range .spec.containers[*]}{''}${pod}{'|'}{.name}{'|'}{.resources.requests.cpu}{'|'}{.resources.limits.cpu}{'|'}{.resources.requests.memory}{'|'}{.resources.limits.memory}{'\n'}{end}")
-    echo "$resource_info" | while IFS='|' read pod_name container_name cpu_requests cpu_limits mem_requests mem_limits; do
+  local pods_json="$(kubectl get pods -n "$namespace" -ojson)"
+  for pod in $(echo "$pods_json" | jq -r '.items[].metadata.name'); do
+  resource_info="$(echo "$pods_json" | jq -r --arg pod "$pod" '.items[] | select(.metadata.name==$pod) | .spec.containers[] | "\($pod)|\(.name)|\(.resources.requests.cpu // "-")|\(.resources.limits.cpu // "-")|\(.resources.requests.memory // "-")|\(.resources.limits.memory // "-")"')"
+  echo "$resource_info" | while IFS='|' read pod_name container_name cpu_requests cpu_limits mem_requests mem_limits; do
       printf "%-25s | %-20s | %-7s | %-7s | %-7s | %-7s\n" \
         "$(trim "$pod_name" 25)" "$(trim "$container_name" 20)" "$cpu_requests" "$cpu_limits" "$mem_requests" "$mem_limits"
     done
