@@ -6,6 +6,24 @@ function print_header() {
   printf '%*s\n' $((73 + 18 - 1)) | tr ' ' '-'
 }
 
+function convert_to_mi() {
+  if [ "$1" = "-" ]; then
+    echo "-"
+  else
+    num=${1//[^0-9.]/}
+    unit=${1//[0-9.]/}
+
+    case "$unit" in
+        k|K) echo "$((num / 1024))Mi" ;;
+        m|M|Mi) echo "${num}Mi" ;;
+        g|G|Gi) echo "$((num * 1024))Mi" ;;
+        t|T|Ti) echo "$((num * 1024 * 1024))Mi" ;;
+        "") echo "$((num / 1024 / 1024))Mi" ;;
+        *) echo "Unknown unit" >&2; return 1 ;;
+    esac
+  fi
+}
+
 function trim() {
   local string="$1"
   local length="$2"
@@ -17,13 +35,12 @@ function print_pod_resources() {
   # Get all pods in the namespace and iterate over them
   local pod
   local resource_info
-  for pod in $(kubectl get pods -n "$namespace" -o jsonpath='{.items[*].metadata.name}'); do
-    # For each pod, fetch container details
-    resource_info=$(kubectl get pod "$pod" -n "$namespace" \
-      -ojsonpath="{range .spec.containers[*]}{''}${pod}{'|'}{.name}{'|'}{.resources.requests.cpu}{'|'}{.resources.limits.cpu}{'|'}{.resources.requests.memory}{'|'}{.resources.limits.memory}{'\n'}{end}")
-    echo "$resource_info" | while IFS='|' read pod_name container_name cpu_requests cpu_limits mem_requests mem_limits; do
+  local pods_json="$(kubectl get pods -n "$namespace" -ojson)"
+  for pod in $(echo "$pods_json" | jq -r '.items[].metadata.name'); do
+  resource_info="$(echo "$pods_json" | jq -r --arg pod "$pod" '.items[] | select(.metadata.name==$pod) | .spec.containers[] | "\($pod)|\(.name)|\(.resources.requests.cpu // "-")|\(.resources.limits.cpu // "-")|\(.resources.requests.memory // "-")|\(.resources.limits.memory // "-")"')"
+  echo "$resource_info" | while IFS='|' read pod_name container_name cpu_requests cpu_limits mem_requests mem_limits; do
       printf "%-25s | %-20s | %-7s | %-7s | %-7s | %-7s\n" \
-        "$(trim "$pod_name" 25)" "$(trim "$container_name" 20)" "$cpu_requests" "$cpu_limits" "$mem_requests" "$mem_limits"
+      "$(trim "$pod_name" 25)" "$(trim "$container_name" 20)" "$cpu_requests" "$cpu_limits" "$(convert_to_mi $mem_requests)" "$(convert_to_mi $mem_limits)"
     done
   done
   # print footer
